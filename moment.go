@@ -69,6 +69,12 @@ func New() *Moment {
 	return m
 }
 
+func NewMoment(t time.Time) *Moment {
+	m := &Moment{t, new(MomentParser)}
+
+	return m
+}
+
 func (m *Moment) GetTime() time.Time {
 	return m.time
 }
