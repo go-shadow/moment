@@ -334,7 +334,32 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	relative = regexp.MustCompile(`(first|last) day of (` + months + `)(?:\s(\d{4,4}))?`)
 
-	relative = regexp.MustCompile(`(this|next|last|previous) (` + days + `)`)
+	relative = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + days + `)`)
+
+	if match := relative.FindStringSubmatch(str); match != nil {
+		var when string
+		for i, name := range relative.SubexpNames() {
+			if name == "relperiod" {
+				when = match[i]
+			}
+		}
+		weekDay := match[len(match)-1]
+
+		str = strings.Replace(str, match[0], "", 1)
+
+		wDay, err := ParseWeekDay(weekDay)
+		if err == nil {
+			switch when {
+			case "last", "previous":
+				m.GoBackTo(wDay)
+			case "", "this", "next":
+				m.GoTo(wDay)
+
+			default:
+				m.GoTo(wDay)
+			}
+		}
+	}
 
 	relative = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
 
