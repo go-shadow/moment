@@ -351,12 +351,15 @@ func (m *Moment) Strtotime(str string) *Moment {
 		if err == nil {
 			switch when {
 			case "last", "previous":
-				m.GoBackTo(wDay)
-			case "", "this", "next":
-				m.GoTo(wDay)
+				m.GoBackTo(wDay, true)
 
+			case "next":
+				m.GoTo(wDay, true)
+
+			case "", "this":
+				m.GoTo(wDay, false)
 			default:
-				m.GoTo(wDay)
+				m.GoTo(wDay, false)
 			}
 		}
 	}
@@ -725,7 +728,7 @@ func (m *Moment) StartOfDay() *Moment {
 
 // @todo ISO8601 Starts on Monday
 func (m *Moment) StartOfWeek() *Moment {
-	return m.GoBackTo(time.Monday).StartOfDay()
+	return m.GoBackTo(time.Monday, false).StartOfDay()
 }
 
 // Carbon
@@ -775,7 +778,7 @@ func (m *Moment) EndOfDay() *Moment {
 
 // @todo ISO8601 Ends on Sunday
 func (m *Moment) EndOfWeek() *Moment {
-	return m.GoTo(time.Sunday).EndOfDay()
+	return m.GoTo(time.Sunday, false).EndOfDay()
 }
 
 // Carbon
@@ -785,13 +788,17 @@ func (m *Moment) EndOfMonth() *Moment {
 
 // Carbon
 func (m *Moment) EndOfYear() *Moment {
-	return m.GoToMonth(time.December).EndOfMonth()
+	return m.GoToMonth(time.December, false).EndOfMonth()
 }
 
 // Custom
-func (m *Moment) GoTo(day time.Weekday) *Moment {
+func (m *Moment) GoTo(day time.Weekday, next bool) *Moment {
 	if m.Day() == day {
-		return m
+		if !next {
+			return m
+		} else {
+			m.AddDay()
+		}
 	}
 
 	var diff int
@@ -803,9 +810,13 @@ func (m *Moment) GoTo(day time.Weekday) *Moment {
 }
 
 // Custom
-func (m *Moment) GoBackTo(day time.Weekday) *Moment {
+func (m *Moment) GoBackTo(day time.Weekday, previous bool) *Moment {
 	if m.Day() == day {
-		return m
+		if !previous {
+			return m
+		} else {
+			m.SubDay()
+		}
 	}
 
 	var diff int
@@ -817,9 +828,13 @@ func (m *Moment) GoBackTo(day time.Weekday) *Moment {
 }
 
 // Custom
-func (m *Moment) GoToMonth(month time.Month) *Moment {
+func (m *Moment) GoToMonth(month time.Month, next bool) *Moment {
 	if m.Month() == month {
-		return m
+		if !next {
+			return m
+		} else {
+			m.AddMonths(1)
+		}
 	}
 
 	var diff int
@@ -831,9 +846,13 @@ func (m *Moment) GoToMonth(month time.Month) *Moment {
 }
 
 // Custom
-func (m *Moment) GoBackToMonth(month time.Month) *Moment {
+func (m *Moment) GoBackToMonth(month time.Month, previous bool) *Moment {
 	if m.Month() == month {
-		return m
+		if !previous {
+			return m
+		} else {
+			m.SubMonths(1)
+		}
 	}
 
 	var diff int
@@ -880,10 +899,10 @@ func (m *Moment) SetDay(day int) *Moment {
 // Custom
 func (m *Moment) SetMonth(month time.Month) *Moment {
 	if m.Month() > month {
-		return m.GoBackToMonth(month)
+		return m.GoBackToMonth(month, false)
 	}
 
-	return m.GoToMonth(month)
+	return m.GoToMonth(month, false)
 }
 
 // Custom
