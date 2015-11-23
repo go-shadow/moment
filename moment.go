@@ -217,7 +217,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 	// m.StartOf("month", "January").GoTo(time.Sunday)
 
 	months := "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december"
-	days := "mon|monday|tues|tuesday|wed|wednesday|thurs|thursday|fri|friday|sat|saturday|sun|sunday"
+	days := "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun"
 
 	relative = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
 
