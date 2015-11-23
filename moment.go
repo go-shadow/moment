@@ -130,7 +130,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 	})
 
 	// Remove ordinal suffixes st, nd, rd, th
-	ordinal := regexp.MustCompile("([0-9]+)st|nd|rd|th")
+	ordinal := regexp.MustCompile("([0-9]+)(st|nd|rd|th)")
 	str = ordinal.ReplaceAllString(str, "$1")
 
 	// Replace n second|minute|hour... ago to -n second|minute|hour... to consolidate parsing
