@@ -163,14 +163,14 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	// Try to parse out time from the string
 	// @todo seconds need a colon before
-	time := `(?P<hour>\d\d?):(?P<minutes>\d\d?)(?P<seconds>\d\d?)?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`
+	strTime := `(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`
 	var timeDefaults = map[string]int{
 		"hour":    0,
 		"minutes": 0,
 		"seconds": 0,
 	}
 
-	relative = regexp.MustCompile(time)
+	relative = regexp.MustCompile(strTime)
 
 	timeMatches := timeDefaults
 	var zone string
