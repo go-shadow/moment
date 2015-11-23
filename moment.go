@@ -313,7 +313,22 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	*/
 
-	relative = regexp.MustCompile(`^(yesterday|today|tomorrow) ?` + time + `$`)
+	relative = regexp.MustCompile(`(yesterday|today|tomorrow)`)
+
+	if match := relative.FindStringSubmatch(str); match != nil && len(match) > 1 {
+		day := match[1]
+
+		str = strings.Replace(str, match[0], "", 1)
+
+		switch day {
+		case "today":
+			m.Today()
+		case "yesterday":
+			m.Yesterday()
+		case "tomorrow":
+			m.Tomorrow()
+		}
+	}
 
 	relative = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
 
