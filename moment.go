@@ -97,9 +97,6 @@ func (m *Moment) Strtotime(str string) *Moment {
 	compiled := regexp.MustCompile(`\s{2,}`)
 	str = compiled.ReplaceAllString(str, " ")
 
-	// Assume everything is relative from now
-	m.Now()
-
 	// Replace written numbers (i.e. nine, ten) with actual numbers (9, 10)
 	written := regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
 	str = written.ReplaceAllStringFunc(str, func(n string) string {
