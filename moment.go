@@ -152,9 +152,9 @@ func (m *Moment) Strtotime(str string) *Moment {
 				number, _ := strconv.Atoi(match[i][2])
 				m.Add(match[i][3], number)
 			}
-		}
 
-		return m
+			str = strings.Replace(str, match[i][0], "", 1)
+		}
 	}
 
 	// Remove any words that aren't needed for consistency
