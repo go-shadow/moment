@@ -32,6 +32,23 @@ const (
 	W3C     = "2006-01-02T15:04:05Z07:00"
 )
 
+// regexp
+var (
+	compiled       = regexp.MustCompile(`\s{2,}`)
+	relativeday    = regexp.MustCompile(`(yesterday|today|tomorrow)`)
+	relative1      = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
+	relative2      = regexp.MustCompile(`(first|last) day of (` + "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december" + `)(?:\s(\d{4,4}))?`)
+	relative3      = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun" + `)`)
+	relativeval    = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
+	ago            = regexp.MustCompile("^([0-9]+) (second|minute|hour|day|week|month|year)s? ago$")
+	ordinal        = regexp.MustCompile("([0-9]+)(st|nd|rd|th)")
+	written        = regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
+	relativediff   = regexp.MustCompile(`([\+\-])?([0-9]+),? ?(second|minute|hour|day|week|month|year)s?`)
+	relativetime   = regexp.MustCompile(`(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`)
+	relativeperiod = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
+	numberRegex    = regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
+)
+
 // http://golang.org/src/pkg/time/format.go?s=12686:12728#L404
 
 // Timezone implementation
@@ -100,11 +117,9 @@ func (m *Moment) MomentGo(layout string, datetime string) *Moment {
 // This method is nowhere near done - requires lots of work.
 func (m *Moment) Strtotime(str string) *Moment {
 	str = strings.ToLower(strings.TrimSpace(str))
-	compiled := regexp.MustCompile(`\s{2,}`)
 	str = compiled.ReplaceAllString(str, " ")
 
 	// Replace written numbers (i.e. nine, ten) with actual numbers (9, 10)
-	written := regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
 	str = written.ReplaceAllStringFunc(str, func(n string) string {
 		switch n {
 		case "one":
@@ -133,16 +148,13 @@ func (m *Moment) Strtotime(str string) *Moment {
 	})
 
 	// Remove ordinal suffixes st, nd, rd, th
-	ordinal := regexp.MustCompile("([0-9]+)(st|nd|rd|th)")
 	str = ordinal.ReplaceAllString(str, "$1")
 
 	// Replace n second|minute|hour... ago to -n second|minute|hour... to consolidate parsing
-	ago := regexp.MustCompile("^([0-9]+) (second|minute|hour|day|week|month|year)s? ago$")
 	str = ago.ReplaceAllString(str, "-$1 $2")
 
 	// Look for relative +1day, +3 days 5 hours 15 minutes
-	relative := regexp.MustCompile(`([\+\-])?([0-9]+),? ?(second|minute|hour|day|week|month|year)s?`)
-	if match := relative.FindAllStringSubmatch(str, -1); match != nil {
+	if match := relativediff.FindAllStringSubmatch(str, -1); match != nil {
 		for i := range match {
 			switch match[i][1] {
 			case "-":
@@ -165,20 +177,16 @@ func (m *Moment) Strtotime(str string) *Moment {
 	str = strings.Replace(str, "previous", "last", -1)
 
 	// Try to parse out time from the string
-	// @todo seconds need a colon before
-	strTime := `(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`
 	var timeDefaults = map[string]int{
 		"hour":    0,
 		"minutes": 0,
 		"seconds": 0,
 	}
 
-	relative = regexp.MustCompile(strTime)
-
 	timeMatches := timeDefaults
 	var zone string
-	if match := relative.FindStringSubmatch(str); match != nil {
-		for i, name := range relative.SubexpNames() {
+	if match := relativetime.FindStringSubmatch(str); match != nil {
+		for i, name := range relativetime.SubexpNames() {
 			if i == 0 {
 				str = strings.Replace(str, match[i], "", 1)
 				continue
@@ -219,12 +227,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	// m.StartOf("month", "January").GoTo(time.Sunday)
 
-	months := "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december"
-	days := "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun"
-
-	relative = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
-
-	if match := relative.FindStringSubmatch(str); match != nil {
+	if match := relativeperiod.FindStringSubmatch(str); match != nil {
 		period := match[1]
 		unit := match[2]
 
@@ -316,9 +319,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	*/
 
-	relative = regexp.MustCompile(`(yesterday|today|tomorrow)`)
-
-	if match := relative.FindStringSubmatch(str); match != nil && len(match) > 1 {
+	if match := relativeday.FindStringSubmatch(str); match != nil && len(match) > 1 {
 		day := match[1]
 
 		str = strings.Replace(str, match[0], "", 1)
@@ -333,15 +334,9 @@ func (m *Moment) Strtotime(str string) *Moment {
 		}
 	}
 
-	relative = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
-
-	relative = regexp.MustCompile(`(first|last) day of (` + months + `)(?:\s(\d{4,4}))?`)
-
-	relative = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + days + `)`)
-
-	if match := relative.FindStringSubmatch(str); match != nil {
+	if match := relative3.FindStringSubmatch(str); match != nil {
 		var when string
-		for i, name := range relative.SubexpNames() {
+		for i, name := range relative3.SubexpNames() {
 			if name == "relperiod" {
 				when = match[i]
 			}
@@ -366,8 +361,6 @@ func (m *Moment) Strtotime(str string) *Moment {
 			}
 		}
 	}
-
-	relative = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
 
 	/*
 
@@ -953,9 +946,7 @@ func (m *Moment) Format(layout string) string {
 
 	// This has to happen after time.Format
 	if hasCustom && strings.Contains(formatted, "<stdOrdinal>") {
-		regex := regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
-
-		formatted = regex.ReplaceAllStringFunc(formatted, func(n string) string {
+		formatted = numberRegex.ReplaceAllStringFunc(formatted, func(n string) string {
 			ordinal, _ := strconv.Atoi(strings.Replace(n, "<stdOrdinal>", "", 1))
 			return m.ordinal(ordinal)
 		})
