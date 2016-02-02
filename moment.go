@@ -45,6 +45,7 @@ var (
 	written        = regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
 	relativediff   = regexp.MustCompile(`([\+\-])?([0-9]+),? ?(second|minute|hour|day|week|month|year)s?`)
 	relativetime   = regexp.MustCompile(`(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`)
+	yearmonthday   = regexp.MustCompile(`(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})`)
 	relativeperiod = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
 	numberRegex    = regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
 )
@@ -175,6 +176,39 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	// Support for interchangeable previous/last
 	str = strings.Replace(str, "previous", "last", -1)
+
+	var dateDefaults = map[string]int{
+		"year":    0,
+		"month": 0,
+		"day": 0,
+	}
+
+	dateMatches := dateDefaults
+	if match := yearmonthday.FindStringSubmatch(str); match != nil {
+		for i, name := range yearmonthday.SubexpNames() {
+			if i == 0 {
+				str = strings.Replace(str, match[i], "", 1)
+				continue
+			}
+
+			if match[i] == "" {
+				continue
+			}
+			
+			if name == "year" || name == "month" || name == "day" {
+				dateMatches[name], _ = strconv.Atoi(match[i])
+			}
+
+		}
+
+		defer m.strtotimeSetDate(dateMatches)
+		if str == "" {
+			// Nothing left to parse
+			return m
+		}
+
+		str = strings.TrimSpace(str)
+	}
 
 	// Try to parse out time from the string
 	var timeDefaults = map[string]int{
@@ -395,6 +429,10 @@ func (m *Moment) Strtotime(str string) *Moment {
 // @todo deal with timezone
 func (m *Moment) strtotimeSetTime(time map[string]int, zone string) {
 	m.SetHour(time["hour"]).SetMinute(time["minutes"]).SetSecond(time["seconds"])
+}
+
+func (m *Moment) strtotimeSetDate(date map[string]int) {
+	m.SetYear(date["year"]).SetMonth(time.Month(date["month"])).SetDay(date["day"])
 }
 
 func (m Moment) Clone() *Moment {
