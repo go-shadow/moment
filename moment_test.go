@@ -89,10 +89,11 @@ func TestHour(t *testing.T) {
 }
 
 func TestNextLast(t *testing.T) {
+	var n, d time.Time
 	// next monday
-	d := time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
 	nextMonday := time.Date(2016, 2, 1, 23, 59, 59, 0, time.UTC)
-	n := NewMoment(d).Strtotime("next monday").GetTime()
+	n = NewMoment(d).Strtotime("next monday").GetTime()
 	if nextMonday != n {
 		t.Fatalf("Expected next monday to be %v, got %v instead", nextMonday, n)
 	}
@@ -103,5 +104,21 @@ func TestNextLast(t *testing.T) {
 	n = NewMoment(d).Strtotime("last monday").GetTime()
 	if lastMonday != n {
 		t.Fatalf("Expected last monday to be %v, got %v instead", lastMonday, n)
+	}
+	
+	// next week
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	nextWeek := time.Date(2016, 2, 6, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("next week").GetTime()
+	if nextWeek != n {
+		t.Fatalf("Expected next week to be %v, got %v instead", nextWeek, n)
+	}
+	
+	// last week
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	lastWeek := time.Date(2016, 1, 23, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("last week").GetTime()
+	if lastWeek != n {
+		t.Fatalf("Expected last week to be %v, got %v instead", lastWeek, n)
 	}
 }
