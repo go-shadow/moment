@@ -22,7 +22,17 @@ func TestYesterdayTodayTomorrow(t *testing.T) {
 		t.Fatalf("Expected %s to be before %s", today.Format(time.RFC3339), tomorrow.Format(time.RFC3339))
 	}
 
+	tomorrow = New().Strtotime("+1day").GetTime()
+	if today.After(tomorrow) {
+		t.Fatalf("Expected %s to be before %s", today.Format(time.RFC3339), tomorrow.Format(time.RFC3339))
+	}
+
 	yesterday := New().Strtotime("yesterday").GetTime()
+	if yesterday.After(today) {
+		t.Fatalf("Expected %s to be before %s", yesterday.Format(time.RFC3339), today.Format(time.RFC3339))
+	}
+
+	yesterday = New().Strtotime("-1day").GetTime()
 	if yesterday.After(today) {
 		t.Fatalf("Expected %s to be before %s", yesterday.Format(time.RFC3339), today.Format(time.RFC3339))
 	}
@@ -68,12 +78,30 @@ func TestHour(t *testing.T) {
 		},
 	}
 
-	now := time.Now().Truncate(time.Second).Add(time.Nanosecond*112233445)
+	now := time.Now().Truncate(time.Second).Add(time.Nanosecond * 112233445)
 
 	for _, p := range pairs {
 		if timeToCheck, ok := checkTimeFormat(now, p.Format, p.Value); !ok {
 			t.Fatalf("Expected %s, got %s", p.Value, timeToCheck.Format(p.Format))
 		}
 
+	}
+}
+
+func TestNextLast(t *testing.T) {
+	// next monday
+	d := time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	nextMonday := time.Date(2016, 2, 1, 23, 59, 59, 0, time.UTC)
+	n := NewMoment(d).Strtotime("next monday").GetTime()
+	if nextMonday != n {
+		t.Fatalf("Expected next monday to be %v, got %v instead", nextMonday, n)
+	}
+	
+	// last monday
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	lastMonday := time.Date(2016, 1, 25, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("last monday").GetTime()
+	if lastMonday != n {
+		t.Fatalf("Expected last monday to be %v, got %v instead", lastMonday, n)
 	}
 }
