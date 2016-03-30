@@ -154,3 +154,47 @@ func TestNextLast(t *testing.T) {
 		t.Fatalf("Expected last year to be %v, got %v instead", lastYear, n)
 	}
 }
+
+func TestAgo(t *testing.T) {
+	var n, d, newDate time.Time
+
+	// one hour ago
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	newDate = time.Date(2016, 1, 30, 22, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("one hour ago").GetTime()
+	if newDate != n {
+		t.Fatalf("Expected an hour ago to be %v, got %v instead", newDate, n)
+	}
+
+	// one day ago
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	newDate = time.Date(2016, 1, 29, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("one day ago").GetTime()
+	if newDate != n {
+		t.Fatalf("Expected an day ago to be %v, got %v instead", newDate, n)
+	}
+
+	// one week ago
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	newDate = time.Date(2016, 1, 23, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("one week ago").GetTime()
+	if newDate != n {
+		t.Fatalf("Expected an week ago to be %v, got %v instead", newDate, n)
+	}
+
+	// one month ago
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	newDate = time.Date(2015, 12, 30, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("one month ago").GetTime()
+	if newDate != n {
+		t.Fatalf("Expected an month ago to be %v, got %v instead", newDate, n)
+	}
+	
+	// one year ago
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	newDate = time.Date(2015, 1, 30, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("one year ago").GetTime()
+	if newDate != n {
+		t.Fatalf("Expected an year ago to be %v, got %v instead", newDate, n)
+	}
+}
