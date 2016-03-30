@@ -184,9 +184,9 @@ func (m *Moment) Strtotime(str string) *Moment {
 	str = strings.Replace(str, "previous", "last", -1)
 
 	var dateDefaults = map[string]int{
-		"year":    0,
+		"year":  0,
 		"month": 0,
-		"day": 0,
+		"day":   0,
 	}
 
 	dateMatches := dateDefaults
@@ -200,7 +200,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 			if match[i] == "" {
 				continue
 			}
-			
+
 			if name == "year" || name == "month" || name == "day" {
 				dateMatches[name], _ = strconv.Atoi(match[i])
 			}
