@@ -121,4 +121,20 @@ func TestNextLast(t *testing.T) {
 	if lastWeek != n {
 		t.Fatalf("Expected last week to be %v, got %v instead", lastWeek, n)
 	}
+	
+	// next month
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	nextMonth := time.Date(2016, 3, 1, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("next month").GetTime()
+	if nextMonth != n {
+		t.Fatalf("Expected next month to be %v, got %v instead", nextMonth, n)
+	}
+	
+	// last month
+	d = time.Date(2016, 1, 30, 23, 59, 59, 0, time.UTC)
+	lastMonth := time.Date(2015, 12, 30, 23, 59, 59, 0, time.UTC)
+	n = NewMoment(d).Strtotime("last month").GetTime()
+	if lastMonth != n {
+		t.Fatalf("Expected last month to be %v, got %v instead", lastMonth, n)
+	}
 }
