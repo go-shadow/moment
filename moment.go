@@ -754,7 +754,15 @@ func (m *Moment) StartOf(key string) *Moment {
 // Carbon
 func (m *Moment) StartOfDay() *Moment {
 	if m.Hour() > 0 {
+		_, timeOffset := m.GetTime().Zone()
 		m.SubHours(m.Hour())
+
+		_, newTimeOffset := m.GetTime().Zone()
+		diffOffset := timeOffset - newTimeOffset
+		if diffOffset != 0 {
+			// we need to adjust for time zone difference
+			m.AddSeconds(diffOffset)
+		}
 	}
 
 	return m.StartOf("hour")
