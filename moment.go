@@ -32,21 +32,27 @@ const (
 	W3C     = "2006-01-02T15:04:05Z07:00"
 )
 
+var (
+	regex_days = "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun"
+	regex_period = "second|minute|hour|day|week|month|year"
+	regex_numbers = "one|two|three|four|five|six|seven|eight|nine|ten"
+)
+
 // regexp
 var (
 	compiled       = regexp.MustCompile(`\s{2,}`)
 	relativeday    = regexp.MustCompile(`(yesterday|today|tomorrow)`)
-	relative1      = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
-	relative2      = regexp.MustCompile(`(first|last) day of (` + "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december" + `)(?:\s(\d{4,4}))?`)
-	relative3      = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun" + `)`)
-	relativeval    = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
-	ago            = regexp.MustCompile("^([0-9]+) (second|minute|hour|day|week|month|year)s? ago$")
+	//relative1      = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
+	//relative2      = regexp.MustCompile(`(first|last) day of (` + "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december" + `)(?:\s(\d{4,4}))?`)
+	relative3      = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + regex_days + `)`)
+	//relativeval    = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
+	ago            = regexp.MustCompile(`([0-9]+) (` + regex_period + `)s? ago`)
 	ordinal        = regexp.MustCompile("([0-9]+)(st|nd|rd|th)")
-	written        = regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
-	relativediff   = regexp.MustCompile(`([\+\-])?([0-9]+),? ?(second|minute|hour|day|week|month|year)s?`)
+	written        = regexp.MustCompile(regex_numbers)
+	relativediff   = regexp.MustCompile(`([\+\-])?([0-9]+),? ?(` + regex_period + `)s?`)
 	relativetime   = regexp.MustCompile(`(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`)
 	yearmonthday   = regexp.MustCompile(`(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})`)
-	relativeperiod = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
+	relativeperiod = regexp.MustCompile(`(?P<relperiod>this|next|last) (week|month|year)`)
 	numberRegex    = regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
 )
 
@@ -178,9 +184,9 @@ func (m *Moment) Strtotime(str string) *Moment {
 	str = strings.Replace(str, "previous", "last", -1)
 
 	var dateDefaults = map[string]int{
-		"year":    0,
+		"year":  0,
 		"month": 0,
-		"day": 0,
+		"day":   0,
 	}
 
 	dateMatches := dateDefaults
@@ -194,7 +200,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 			if match[i] == "" {
 				continue
 			}
-			
+
 			if name == "year" || name == "month" || name == "day" {
 				dateMatches[name], _ = strconv.Atoi(match[i])
 			}
