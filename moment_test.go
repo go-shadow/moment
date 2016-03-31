@@ -2,12 +2,54 @@ package moment
 
 import (
 	"testing"
+	"reflect"
 	"time"
 )
 
 var (
 	oneDay = time.Duration(time.Hour * 24)
 )
+
+// Test some times at the start of the day with some daylight savings
+func TestStartOfDay(t *testing.T) {
+
+	lon, _ := time.LoadLocation("Europe/London")
+
+	testCases := []struct {
+		before *Moment
+		after  *Moment
+	}{
+		{
+			// Clocks +1 hour
+			before: NewMoment(time.Date(2015, 3, 29, 0, 0, 0, 0, lon)),
+			after:  NewMoment(time.Date(2015, 3, 29, 0, 0, 0, 0, lon)),
+		},
+		{
+			// Clocks -1 hour
+			before: NewMoment(time.Date(2015, 10, 25, 2, 0, 0, 0, lon)),
+			after:  NewMoment(time.Date(2015, 10, 25, 0, 0, 0, 0, lon)),
+		},
+		{
+			// Clocks -1 hour (same as above)
+			before: NewMoment(time.Date(2015, 10, 25, 12, 0, 0, 0, lon)),
+			after:  NewMoment(time.Date(2015, 10, 25, 0, 0, 0, 0, lon)),
+		},
+		{
+			// Clocks no change
+			before: NewMoment(time.Date(2016, 1, 01, 10, 0, 0, 0, lon)),
+			after:  NewMoment(time.Date(2016, 1, 01, 0, 0, 0, 0, lon)),
+		},
+	}
+
+	for _, test := range testCases {
+
+		res := test.before.StartOfDay()
+
+		if !reflect.DeepEqual(res, test.after) {
+			t.Errorf("Moment %s does not match expected %s", res.time.String(), test.after.time.String())
+		}
+	}
+}
 
 func TestYesterdayTodayTomorrow(t *testing.T) {
 	now := time.Now()
