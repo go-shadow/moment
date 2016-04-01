@@ -32,6 +32,30 @@ const (
 	W3C     = "2006-01-02T15:04:05Z07:00"
 )
 
+var (
+	regex_days = "monday|mon|tuesday|tues|wednesday|wed|thursday|thurs|friday|fri|saturday|sat|sunday|sun"
+	regex_period = "second|minute|hour|day|week|month|year"
+	regex_numbers = "one|two|three|four|five|six|seven|eight|nine|ten"
+)
+
+// regexp
+var (
+	compiled       = regexp.MustCompile(`\s{2,}`)
+	relativeday    = regexp.MustCompile(`(yesterday|today|tomorrow)`)
+	//relative1      = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
+	//relative2      = regexp.MustCompile(`(first|last) day of (` + "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december" + `)(?:\s(\d{4,4}))?`)
+	relative3      = regexp.MustCompile(`((?P<relperiod>this|next|last|previous) )?(` + regex_days + `)`)
+	//relativeval    = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
+	ago            = regexp.MustCompile(`([0-9]+) (` + regex_period + `)s? ago`)
+	ordinal        = regexp.MustCompile("([0-9]+)(st|nd|rd|th)")
+	written        = regexp.MustCompile(regex_numbers)
+	relativediff   = regexp.MustCompile(`([\+\-])?([0-9]+),? ?(` + regex_period + `)s?`)
+	relativetime   = regexp.MustCompile(`(?P<hour>\d\d?):(?P<minutes>\d\d?)(:(?P<seconds>\d\d?))?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`)
+	yearmonthday   = regexp.MustCompile(`(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})`)
+	relativeperiod = regexp.MustCompile(`(?P<relperiod>this|next|last) (week|month|year)`)
+	numberRegex    = regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
+)
+
 // http://golang.org/src/pkg/time/format.go?s=12686:12728#L404
 
 // Timezone implementation
@@ -69,6 +93,12 @@ func New() *Moment {
 	return m
 }
 
+func NewMoment(t time.Time) *Moment {
+	m := &Moment{t, new(MomentParser)}
+
+	return m
+}
+
 func (m *Moment) GetTime() time.Time {
 	return m.time
 }
@@ -94,14 +124,9 @@ func (m *Moment) MomentGo(layout string, datetime string) *Moment {
 // This method is nowhere near done - requires lots of work.
 func (m *Moment) Strtotime(str string) *Moment {
 	str = strings.ToLower(strings.TrimSpace(str))
-	compiled := regexp.MustCompile(`\s{2,}`)
 	str = compiled.ReplaceAllString(str, " ")
 
-	// Assume everything is relative from now
-	m.Now()
-
 	// Replace written numbers (i.e. nine, ten) with actual numbers (9, 10)
-	written := regexp.MustCompile("one|two|three|four|five|six|seven|eight|nine|ten")
 	str = written.ReplaceAllStringFunc(str, func(n string) string {
 		switch n {
 		case "one":
@@ -130,16 +155,13 @@ func (m *Moment) Strtotime(str string) *Moment {
 	})
 
 	// Remove ordinal suffixes st, nd, rd, th
-	ordinal := regexp.MustCompile("([0-9]+)st|nd|rd|th")
 	str = ordinal.ReplaceAllString(str, "$1")
 
 	// Replace n second|minute|hour... ago to -n second|minute|hour... to consolidate parsing
-	ago := regexp.MustCompile("^([0-9]+) (second|minute|hour|day|week|month|year)s? ago$")
 	str = ago.ReplaceAllString(str, "-$1 $2")
 
 	// Look for relative +1day, +3 days 5 hours 15 minutes
-	relative := regexp.MustCompile(`([\+\-])?([0-9]+),? ?(second|minute|hour|day|week|month|year)s?`)
-	if match := relative.FindAllStringSubmatch(str, -1); match != nil {
+	if match := relativediff.FindAllStringSubmatch(str, -1); match != nil {
 		for i := range match {
 			switch match[i][1] {
 			case "-":
@@ -149,9 +171,9 @@ func (m *Moment) Strtotime(str string) *Moment {
 				number, _ := strconv.Atoi(match[i][2])
 				m.Add(match[i][3], number)
 			}
-		}
 
-		return m
+			str = strings.Replace(str, match[i][0], "", 1)
+		}
 	}
 
 	// Remove any words that aren't needed for consistency
@@ -161,21 +183,50 @@ func (m *Moment) Strtotime(str string) *Moment {
 	// Support for interchangeable previous/last
 	str = strings.Replace(str, "previous", "last", -1)
 
+	var dateDefaults = map[string]int{
+		"year":  0,
+		"month": 0,
+		"day":   0,
+	}
+
+	dateMatches := dateDefaults
+	if match := yearmonthday.FindStringSubmatch(str); match != nil {
+		for i, name := range yearmonthday.SubexpNames() {
+			if i == 0 {
+				str = strings.Replace(str, match[i], "", 1)
+				continue
+			}
+
+			if match[i] == "" {
+				continue
+			}
+
+			if name == "year" || name == "month" || name == "day" {
+				dateMatches[name], _ = strconv.Atoi(match[i])
+			}
+
+		}
+
+		defer m.strtotimeSetDate(dateMatches)
+		if str == "" {
+			// Nothing left to parse
+			return m
+		}
+
+		str = strings.TrimSpace(str)
+	}
+
 	// Try to parse out time from the string
-	// @todo seconds need a colon before
-	time := `(?P<hour>\d\d?):(?P<minutes>\d\d?)(?P<seconds>\d\d?)?\s?(?P<meridiem>am|pm)?\s?(?P<zone>[a-z]{3,3})?|(?P<relativetime>noon|midnight)`
 	var timeDefaults = map[string]int{
 		"hour":    0,
 		"minutes": 0,
 		"seconds": 0,
 	}
 
-	relative = regexp.MustCompile(time)
-
 	timeMatches := timeDefaults
 	var zone string
-	if match := relative.FindStringSubmatch(str); match != nil {
-		for i, name := range relative.SubexpNames() {
+	if match := relativetime.FindStringSubmatch(str); match != nil {
+		for i, name := range relativetime.SubexpNames() {
 			if i == 0 {
 				str = strings.Replace(str, match[i], "", 1)
 				continue
@@ -216,12 +267,7 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	// m.StartOf("month", "January").GoTo(time.Sunday)
 
-	months := "jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|september|oct|october|nov|november|dec|december"
-	days := "mon|monday|tues|tuesday|wed|wednesday|thurs|thursday|fri|friday|sat|saturday|sun|sunday"
-
-	relative = regexp.MustCompile(`of (?P<relperiod>this|next|last) (week|month|year)`)
-
-	if match := relative.FindStringSubmatch(str); match != nil {
+	if match := relativeperiod.FindStringSubmatch(str); match != nil {
 		period := match[1]
 		unit := match[2]
 
@@ -313,15 +359,48 @@ func (m *Moment) Strtotime(str string) *Moment {
 
 	*/
 
-	relative = regexp.MustCompile(`^(yesterday|today|tomorrow) ?` + time + `$`)
+	if match := relativeday.FindStringSubmatch(str); match != nil && len(match) > 1 {
+		day := match[1]
 
-	relative = regexp.MustCompile(`(first|last) day of (this|next|last|previous) (week|month|year)`)
+		str = strings.Replace(str, match[0], "", 1)
 
-	relative = regexp.MustCompile(`(first|last) day of (` + months + `)(?:\s(\d{4,4}))?`)
+		switch day {
+		case "today":
+			m.Today()
+		case "yesterday":
+			m.Yesterday()
+		case "tomorrow":
+			m.Tomorrow()
+		}
+	}
 
-	relative = regexp.MustCompile(`(this|next|last|previous) (` + days + `)`)
+	if match := relative3.FindStringSubmatch(str); match != nil {
+		var when string
+		for i, name := range relative3.SubexpNames() {
+			if name == "relperiod" {
+				when = match[i]
+			}
+		}
+		weekDay := match[len(match)-1]
 
-	relative = regexp.MustCompile(`([0-9]+) (day|week|month|year)s? ago`)
+		str = strings.Replace(str, match[0], "", 1)
+
+		wDay, err := ParseWeekDay(weekDay)
+		if err == nil {
+			switch when {
+			case "last", "previous":
+				m.GoBackTo(wDay, true)
+
+			case "next":
+				m.GoTo(wDay, true)
+
+			case "", "this":
+				m.GoTo(wDay, false)
+			default:
+				m.GoTo(wDay, false)
+			}
+		}
+	}
 
 	/*
 
@@ -356,6 +435,10 @@ func (m *Moment) Strtotime(str string) *Moment {
 // @todo deal with timezone
 func (m *Moment) strtotimeSetTime(time map[string]int, zone string) {
 	m.SetHour(time["hour"]).SetMinute(time["minutes"]).SetSecond(time["seconds"])
+}
+
+func (m *Moment) strtotimeSetDate(date map[string]int) {
+	m.SetYear(date["year"]).SetMonth(time.Month(date["month"])).SetDay(date["day"])
 }
 
 func (m Moment) Clone() *Moment {
@@ -677,7 +760,15 @@ func (m *Moment) StartOf(key string) *Moment {
 // Carbon
 func (m *Moment) StartOfDay() *Moment {
 	if m.Hour() > 0 {
+		_, timeOffset := m.GetTime().Zone()
 		m.SubHours(m.Hour())
+
+		_, newTimeOffset := m.GetTime().Zone()
+		diffOffset := timeOffset - newTimeOffset
+		if diffOffset != 0 {
+			// we need to adjust for time zone difference
+			m.AddSeconds(diffOffset)
+		}
 	}
 
 	return m.StartOf("hour")
@@ -685,7 +776,7 @@ func (m *Moment) StartOfDay() *Moment {
 
 // @todo ISO8601 Starts on Monday
 func (m *Moment) StartOfWeek() *Moment {
-	return m.GoBackTo(time.Monday).StartOfDay()
+	return m.GoBackTo(time.Monday, false).StartOfDay()
 }
 
 // Carbon
@@ -735,7 +826,7 @@ func (m *Moment) EndOfDay() *Moment {
 
 // @todo ISO8601 Ends on Sunday
 func (m *Moment) EndOfWeek() *Moment {
-	return m.GoTo(time.Sunday).EndOfDay()
+	return m.GoTo(time.Sunday, false).EndOfDay()
 }
 
 // Carbon
@@ -745,13 +836,17 @@ func (m *Moment) EndOfMonth() *Moment {
 
 // Carbon
 func (m *Moment) EndOfYear() *Moment {
-	return m.GoToMonth(time.December).EndOfMonth()
+	return m.GoToMonth(time.December, false).EndOfMonth()
 }
 
 // Custom
-func (m *Moment) GoTo(day time.Weekday) *Moment {
+func (m *Moment) GoTo(day time.Weekday, next bool) *Moment {
 	if m.Day() == day {
-		return m
+		if !next {
+			return m
+		} else {
+			m.AddDay()
+		}
 	}
 
 	var diff int
@@ -763,9 +858,13 @@ func (m *Moment) GoTo(day time.Weekday) *Moment {
 }
 
 // Custom
-func (m *Moment) GoBackTo(day time.Weekday) *Moment {
+func (m *Moment) GoBackTo(day time.Weekday, previous bool) *Moment {
 	if m.Day() == day {
-		return m
+		if !previous {
+			return m
+		} else {
+			m.SubDay()
+		}
 	}
 
 	var diff int
@@ -777,9 +876,13 @@ func (m *Moment) GoBackTo(day time.Weekday) *Moment {
 }
 
 // Custom
-func (m *Moment) GoToMonth(month time.Month) *Moment {
+func (m *Moment) GoToMonth(month time.Month, next bool) *Moment {
 	if m.Month() == month {
-		return m
+		if !next {
+			return m
+		} else {
+			m.AddMonths(1)
+		}
 	}
 
 	var diff int
@@ -791,9 +894,13 @@ func (m *Moment) GoToMonth(month time.Month) *Moment {
 }
 
 // Custom
-func (m *Moment) GoBackToMonth(month time.Month) *Moment {
+func (m *Moment) GoBackToMonth(month time.Month, previous bool) *Moment {
 	if m.Month() == month {
-		return m
+		if !previous {
+			return m
+		} else {
+			m.SubMonths(1)
+		}
 	}
 
 	var diff int
@@ -840,10 +947,10 @@ func (m *Moment) SetDay(day int) *Moment {
 // Custom
 func (m *Moment) SetMonth(month time.Month) *Moment {
 	if m.Month() > month {
-		return m.GoBackToMonth(month)
+		return m.GoBackToMonth(month, false)
 	}
 
-	return m.GoToMonth(month)
+	return m.GoToMonth(month, false)
 }
 
 // Custom
@@ -891,9 +998,7 @@ func (m *Moment) Format(layout string) string {
 
 	// This has to happen after time.Format
 	if hasCustom && strings.Contains(formatted, "<stdOrdinal>") {
-		regex := regexp.MustCompile("([0-9]+)(?:<stdOrdinal>)")
-
-		formatted = regex.ReplaceAllStringFunc(formatted, func(n string) string {
+		formatted = numberRegex.ReplaceAllStringFunc(formatted, func(n string) string {
 			ordinal, _ := strconv.Atoi(strings.Replace(n, "<stdOrdinal>", "", 1))
 			return m.ordinal(ordinal)
 		})

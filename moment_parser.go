@@ -7,6 +7,10 @@ import (
 
 type MomentParser struct{}
 
+var (
+	date_pattern = regexp.MustCompile("(LT|LL?L?L?|l{1,4}|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|mm?|ss?|SS?S?|X|zz?|ZZ?|Q)")
+)
+
 /*
 	+	<stdOrdinal> 					S (makes any number before it ordinal)
 	+	stdDayOfYear					1,2,365
@@ -81,10 +85,8 @@ var moment_replacements = map[string]string{
 }
 
 func (p *MomentParser) Convert(layout string) string {
-	pattern := regexp.MustCompile("(LT|LL?L?L?|l{1,4}|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|YYYYY|YYYY|YY|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|mm?|ss?|SS?S?|X|zz?|ZZ?|Q)")
-
 	var match [][]string
-	if match = pattern.FindAllStringSubmatch(layout, -1); match == nil {
+	if match = date_pattern.FindAllStringSubmatch(layout, -1); match == nil {
 		return layout
 	}
 

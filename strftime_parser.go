@@ -7,6 +7,10 @@ import (
 
 type StrftimeParser struct{}
 
+var (
+	replacements_pattern = regexp.MustCompile("%[mbhBedjwuaAVgyGYpPkHlIMSZzsTrRTDFXx]")
+)
+
 // Not implemented
 // U
 // C
@@ -49,10 +53,8 @@ var strftime_replacements = map[string]string{
 }
 
 func (p *StrftimeParser) Convert(layout string) string {
-	pattern := regexp.MustCompile("%[mbhBedjwuaAVgyGYpPkHlIMSZzsTrRTDFXx]")
-
 	var match [][]string
-	if match = pattern.FindAllStringSubmatch(layout, -1); match == nil {
+	if match = replacements_pattern.FindAllStringSubmatch(layout, -1); match == nil {
 		return layout
 	}
 
