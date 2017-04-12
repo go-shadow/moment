@@ -1022,7 +1022,7 @@ func (m *Moment) IsBefore(t Moment) bool {
 	return m.GetTime().Before(t.GetTime())
 }
 
-func (m *Moment) IsSame(t *Moment, layout string) bool {
+func (m *Moment) IsSame(t Moment, layout string) bool {
 	return m.Format(layout) == t.Format(layout)
 }
 
